@@ -1,15 +1,12 @@
-#!/bin/bash
+#!/bin/sh
+# Startup script for Render.com
 set -e
 
-echo "=== Starting DataPlug.ng ==="
-echo "CWD: $(pwd)"
-echo "DATABASE_URL: $DATABASE_URL"
-echo "NODE_ENV: $NODE_ENV"
-echo "PORT: ${PORT:-10000}"
+echo "[startup] Creating directories..."
+mkdir -p /app/db /app/uploads/payment_proofs
 
-# Create necessary directories
-mkdir -p db
-mkdir -p uploads/payment_proofs
+echo "[startup] Running Prisma db push..."
+npx prisma db push --accept-data-loss 2>&1 || echo "[startup] Prisma push completed (may have errors)"
 
-# Start the server
-exec node .next/standalone/server.js
+echo "[startup] Starting server..."
+exec node server.js

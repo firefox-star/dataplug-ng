@@ -371,7 +371,7 @@ export default function HomePage() {
             {/* Plan Cards */}
             <section className="max-w-6xl mx-auto px-4 py-16">
               <h2 className="text-2xl sm:text-3xl font-bold text-center mb-2">Affordable Data Plans</h2>
-              <p className="text-muted-foreground text-center mb-10">Starting from just ₦120. All networks available.</p>
+              <p className="text-muted-foreground text-center mb-10">Starting from just ₦180. All networks available.</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-5">
                 {landingPlans.map((plan, i) => (
                   <motion.div
@@ -594,7 +594,7 @@ export default function HomePage() {
                         onClick={async () => {
                           setShareLoading(true);
                           const shareLink = 'https://ln.run/gfciL';
-                          const shareText = `*DataPlug.ng* \u{1F4F1} \u{1F525}\n\n*Nigeria\u2019s Cheapest Data!*\n\n\u{2728} *500MB* \u2014 \u{20A6}120\n\u{2728} *1GB* \u2014 \u{20A6}240\n\u{2728} *2GB* \u2014 \u{20A6}456\n\u{2728} *5GB* \u2014 \u{20A6}1,020\n\u{2728} *10GB* \u2014 \u{20A6}3,360\n\n\u{1F4F1} MTN | Airtel | Glo | 9Mobile\n\u{1F381} *Earn \u{20A6}3,000* by sharing!\n\n\u{1F517} Join now: ${shareLink}`;
+                          const shareText = `*DataPlug.ng* \u{1F4F1} \u{1F525}\n\n*Nigeria\u2019s Cheapest Data Platform!*\n\n\u{2728} MTN | Airtel | Glo | 9Mobile\n\u{1F4B0} Affordable data for everyone\n\u{1F381} Earn free data by sharing\n\n\u{1F517} Join now: ${shareLink}\n\n*_Get connected today_* \u{1F4F1}\u{2764}\u{FE0F}`;
 
                           // Try Web Share API with image (works on mobile browsers)
                           let shared = false;

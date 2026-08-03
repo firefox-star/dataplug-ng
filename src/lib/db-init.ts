@@ -9,7 +9,7 @@ function hashPassword(password: string): string {
   return crypto.createHash('sha256').update(password).digest('hex');
 }
 
-const SEED_VERSION = 'v5-prices-up';
+const SEED_VERSION = 'v4-sqlite-plans';
 
 async function seedDefaults(db: PrismaClient): Promise<void> {
   const networkDefs = [
@@ -43,10 +43,10 @@ async function seedDefaults(db: PrismaClient): Promise<void> {
   ];
 
   const prices: Record<string, number[]> = {
-    mtn:      [120, 240, 456, 648, 1020, 3360],
-    airtel:   [132, 252, 480, 684, 1080, 3600],
-    glo:      [120, 234, 444, 636, 1020, 3360],
-    '9mobile': [126, 246, 468, 666, 1056, 3480],
+    mtn:      [100, 200, 380, 540, 850, 2800],
+    airtel:   [110, 210, 400, 570, 900, 3000],
+    glo:      [100, 195, 370, 530, 850, 2800],
+    '9mobile': [105, 205, 390, 555, 880, 2900],
   };
 
   const versionSetting = await db.setting.findUnique({ where: { key: '_seed_version' } });
