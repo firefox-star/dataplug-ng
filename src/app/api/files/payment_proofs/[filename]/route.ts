@@ -1,51 +1,23 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { readFile, stat } from 'fs/promises';
-import { existsSync } from 'fs';
 import path from 'path';
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ filename: string }> }
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ filename: string }> }) {
   try {
     const { filename } = await params;
-
-    // Prevent directory traversal
     if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
       return NextResponse.json({ error: 'Invalid filename' }, { status: 400 });
     }
-
-    // Use cwd for file path (persistent on deploy platform)
     const filePath = path.join(process.cwd(), 'uploads', 'payment_proofs', filename);
-
-    // Check file exists
-    try {
-      await stat(filePath);
-    } catch {
-      return NextResponse.json({ error: 'File not found' }, { status: 404 });
-    }
-
+    try { await stat(filePath); } catch { return NextResponse.json({ error: 'File not found' }, { status: 404 }); }
     const buffer = await readFile(filePath);
-
-    // Determine content type
     const ext = filename.toLowerCase().split('.').pop();
-    const contentTypes: Record<string, string> = {
-      jpg: 'image/jpeg',
-      jpeg: 'image/jpeg',
-      png: 'image/png',
-      webp: 'image/webp',
-    };
+    const contentTypes: Record<string, string> = { jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', webp: 'image/webp' };
     const contentType = contentTypes[ext || ''] || 'application/octet-stream';
-
     return new NextResponse(buffer, {
-      headers: {
-        'Content-Type': contentType,
-        'Cache-Control': 'public, max-age=31536000, immutable',
-        'Content-Length': String(buffer.length),
-      },
+      headers: { 'Content-Type': contentType, 'Cache-Control': 'public, max-age=31536000, immutable', 'Content-Length': String(buffer.length) },
     });
   } catch (error) {
-    console.error('File serve error:', error);
     return NextResponse.json({ error: 'Failed to serve file' }, { status: 500 });
   }
 }

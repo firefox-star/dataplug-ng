@@ -5,10 +5,6 @@ import { adminAuth } from '@/lib/admin-auth';
 export async function GET(req: NextRequest) {
   const { error } = await adminAuth(req);
   if (error) return error;
-
-  const users = await db.user.findMany({
-    orderBy: { createdAt: 'desc' },
-  });
-
+  const users = await db.user.findMany({ orderBy: { createdAt: 'desc' } });
   return NextResponse.json({ users });
 }

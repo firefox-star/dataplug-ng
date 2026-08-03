@@ -12,64 +12,23 @@ const updateSchema = z.object({
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { error } = await adminAuth(req);
   if (error) return error;
-
   const { id } = await params;
   try {
     const body = await req.json();
     const parsed = updateSchema.safeParse(body);
-    if (!parsed.success) {
-      return NextResponse.json({ error: 'Invalid data' }, { status: 400 });
-    }
-
+    if (!parsed.success) return NextResponse.json({ error: 'Invalid data' }, { status: 400 });
     const deposit = await db.deposit.findUnique({ where: { id }, include: { user: true } });
-    if (!deposit) {
-      return NextResponse.json({ error: 'Deposit not found' }, { status: 404 });
-    }
-
+    if (!deposit) return NextResponse.json({ error: 'Deposit not found' }, { status: 404 });
     if (parsed.data.status === 'approved') {
       await db.$transaction(async (tx) => {
-        await tx.deposit.update({
-          where: { id },
-          data: { status: 'approved', adminNotes: parsed.data.adminNotes || '' },
-        });
-        await tx.user.update({
-          where: { id: deposit.userId },
-          data: { balance: { increment: deposit.amount } },
-        });
+        await tx.deposit.update({ where: { id }, data: { status: 'approved', adminNotes: parsed.data.adminNotes || '' } });
+        await tx.user.update({ where: { id: deposit.userId }, data: { balance: { increment: deposit.amount } } });
       });
-
-      // Send notification
-      const notificationMessage = parsed.data.message || `Your deposit of ₦${deposit.amount.toLocaleString()} has been approved and credited to your wallet.`;
-      await db.notification.create({
-        data: {
-          userId: deposit.userId,
-          title: 'Deposit Approved',
-          message: notificationMessage,
-        },
-      });
+      await db.notification.create({ data: { userId: deposit.userId, title: 'Deposit Approved', message: parsed.data.message || `Your deposit of ₦${deposit.amount.toLocaleString()} has been approved.` } });
     } else if (parsed.data.status === 'rejected') {
-      await db.deposit.update({
-        where: { id },
-        data: { status: 'rejected', adminNotes: parsed.data.adminNotes || '' },
-      });
-
-      const notificationMessage = parsed.data.message || `Your deposit of ₦${deposit.amount.toLocaleString()} was rejected. Please contact support for more information.`;
-      await db.notification.create({
-        data: {
-          userId: deposit.userId,
-          title: 'Deposit Rejected',
-          message: notificationMessage,
-        },
-      });
-    } else if (parsed.data.adminNotes !== undefined) {
-      await db.deposit.update({
-        where: { id },
-        data: { adminNotes: parsed.data.adminNotes },
-      });
+      await db.deposit.update({ where: { id }, data: { status: 'rejected', adminNotes: parsed.data.adminNotes || '' } });
+      await db.notification.create({ data: { userId: deposit.userId, title: 'Deposit Rejected', message: parsed.data.message || `Your deposit of ₦${deposit.amount.toLocaleString()} was rejected.` } });
     }
-
     return NextResponse.json({ message: 'Deposit updated' });
-  } catch {
-    return NextResponse.json({ error: 'Failed to update deposit' }, { status: 500 });
-  }
+  } catch { return NextResponse.json({ error: 'Failed to update deposit' }, { status: 500 }); }
 }

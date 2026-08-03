@@ -5,9 +5,7 @@ export async function GET() {
   try {
     const settings = await db.setting.findMany();
     const settingsMap: Record<string, string> = {};
-    for (const s of settings) {
-      settingsMap[s.key] = s.value;
-    }
+    for (const s of settings) settingsMap[s.key] = s.value;
     return NextResponse.json({
       site_name: settingsMap.site_name || 'DataPlug.ng',
       site_tagline: settingsMap.site_tagline || '',

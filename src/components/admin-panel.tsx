@@ -187,8 +187,8 @@ export function AdminPanel({ onClose, adminPassword }: AdminPanelProps) {
   const [balanceAdjustment, setBalanceAdjustment] = useState('');
   const [userUpdating, setUserUpdating] = useState(false);
 
-  const [adminNetworks, setAdminNetworks] = useState<AdminNetwork[]>([]);
   const [editPlanOpen, setEditPlanOpen] = useState(false);
+  const [adminNetworks, setAdminNetworks] = useState<AdminNetwork[]>([]);
   const [addPlanOpen, setAddPlanOpen] = useState(false);
   const [planForm, setPlanForm] = useState({
     networkId: '', name: '', size: '', price: '', validity: '', active: true,

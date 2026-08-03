@@ -1,8 +1,3 @@
-/**
- * Database initialization module (SQLite).
- * Idempotent seeding: only creates missing data, never overwrites admin edits.
- */
-
 import { PrismaClient } from '@prisma/client';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
@@ -17,7 +12,6 @@ function hashPassword(password: string): string {
 const SEED_VERSION = 'v5-prices-up';
 
 async function seedDefaults(db: PrismaClient): Promise<void> {
-  // Networks
   const networkDefs = [
     { name: 'MTN', slug: 'mtn', color: '#FFC300', icon: '/logos/mtn.png' },
     { name: 'Airtel', slug: 'airtel', color: '#ED1C24', icon: '/logos/airtel.png' },
@@ -31,13 +25,14 @@ async function seedDefaults(db: PrismaClient): Promise<void> {
 
   const newNetworks = networkDefs.filter(n => !existingSlugs.has(n.slug));
   if (newNetworks.length > 0) {
-    await db.network.createMany({ data: newNetworks, skipDuplicates: true });
+    for (const net of newNetworks) {
+      await db.network.create({ data: net }).catch(() => {});
+    }
     const created = await db.network.findMany({ where: { slug: { in: newNetworks.map(n => n.slug) } } });
     for (const n of created) networkMap.set(n.slug, n.id);
     console.log(`[db-init] Created ${newNetworks.length} networks`);
   }
 
-  // Plans: 5GB and below = 7 days, 10GB = 30 days. No 15/20/50GB.
   const planTemplates = [
     { name: '500MB', size: 0.5, validity: '7 days', sortOrder: 1 },
     { name: '1GB', size: 1, validity: '7 days', sortOrder: 2 },
@@ -54,14 +49,11 @@ async function seedDefaults(db: PrismaClient): Promise<void> {
     '9mobile': [126, 246, 468, 666, 1056, 3480],
   };
 
-  // Seed version migration
   const versionSetting = await db.setting.findUnique({ where: { key: '_seed_version' } });
   const currentVersion = versionSetting?.value || '';
 
   if (currentVersion !== SEED_VERSION) {
     console.log(`[db-init] Seed version changed: ${currentVersion} -> ${SEED_VERSION}`);
-
-    // Deactivate old plans (15GB, 20GB, 50GB that no longer exist)
     const validSizes = planTemplates.map(t => t.size);
     await db.dataPlan.updateMany({
       where: { size: { notIn: validSizes } },
@@ -74,30 +66,22 @@ async function seedDefaults(db: PrismaClient): Promise<void> {
     for (const net of networkDefs) {
       const networkId = netIdMap.get(net.slug);
       if (!networkId) continue;
-
       for (let i = 0; i < planTemplates.length; i++) {
         const template = planTemplates[i];
-        // Find existing plan for this network + size
         const existing = await db.dataPlan.findFirst({
           where: { networkId, name: template.name, active: true },
         });
         if (existing) {
-          // Update price and validity
           await db.dataPlan.update({
             where: { id: existing.id },
             data: { price: prices[net.slug][i], validity: template.validity, sortOrder: template.sortOrder },
           }).catch(() => {});
         } else {
-          // Create new plan
           await db.dataPlan.create({
             data: {
-              networkId,
-              name: template.name,
-              size: template.size,
-              price: prices[net.slug][i],
-              validity: template.validity,
-              active: true,
-              sortOrder: template.sortOrder,
+              networkId, name: template.name, size: template.size,
+              price: prices[net.slug][i], validity: template.validity,
+              active: true, sortOrder: template.sortOrder,
             },
           }).catch(() => {});
         }
@@ -111,7 +95,6 @@ async function seedDefaults(db: PrismaClient): Promise<void> {
     });
     console.log(`[db-init] Plans migrated to ${SEED_VERSION}`);
   } else {
-    // Create any missing plans (fresh DB)
     const existingPlans = await db.dataPlan.findMany({ select: { id: true } });
     if (existingPlans.length === 0) {
       const allNetworks = await db.network.findMany();
@@ -122,13 +105,9 @@ async function seedDefaults(db: PrismaClient): Promise<void> {
         for (let i = 0; i < planTemplates.length; i++) {
           await db.dataPlan.create({
             data: {
-              networkId,
-              name: planTemplates[i].name,
-              size: planTemplates[i].size,
-              price: prices[net.slug][i],
-              validity: planTemplates[i].validity,
-              active: true,
-              sortOrder: planTemplates[i].sortOrder,
+              networkId, name: planTemplates[i].name, size: planTemplates[i].size,
+              price: prices[net.slug][i], validity: planTemplates[i].validity,
+              active: true, sortOrder: planTemplates[i].sortOrder,
             },
           }).catch(() => {});
         }
@@ -137,7 +116,6 @@ async function seedDefaults(db: PrismaClient): Promise<void> {
     }
   }
 
-  // Settings (ONLY INSERT missing, NEVER UPDATE existing — admin edits preserved)
   const settings = [
     { key: 'site_name', value: 'DataPlug.ng' },
     { key: 'site_tagline', value: 'Your Reliable Plug for Cheap Data' },
@@ -153,7 +131,7 @@ async function seedDefaults(db: PrismaClient): Promise<void> {
   for (const s of settings) {
     await db.setting.upsert({
       where: { key: s.key },
-      update: {}, // NEVER update
+      update: {},
       create: s,
     }).catch(() => {});
   }
@@ -161,18 +139,11 @@ async function seedDefaults(db: PrismaClient): Promise<void> {
 
 export async function initDatabase(db: PrismaClient): Promise<void> {
   if (initPromise) return initPromise;
-
   initPromise = (async () => {
-    // Ensure db directory exists (SQLite needs parent dir before creating file)
     const dbDir = path.join(process.cwd(), 'db');
-    if (!fs.existsSync(dbDir)) {
-      try { fs.mkdirSync(dbDir, { recursive: true }); } catch {}
-    }
+    if (!fs.existsSync(dbDir)) { try { fs.mkdirSync(dbDir, { recursive: true }); } catch {} }
     const uploadsDir = path.join(process.cwd(), 'uploads', 'payment_proofs');
-    if (!fs.existsSync(uploadsDir)) {
-      try { fs.mkdirSync(uploadsDir, { recursive: true }); } catch {}
-    }
-
+    if (!fs.existsSync(uploadsDir)) { try { fs.mkdirSync(uploadsDir, { recursive: true }); } catch {} }
     try {
       await seedDefaults(db);
       console.log('[db-init] Database ready (SQLite)');
@@ -181,6 +152,5 @@ export async function initDatabase(db: PrismaClient): Promise<void> {
       initPromise = null;
     }
   })();
-
   return initPromise;
 }

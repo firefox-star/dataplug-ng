@@ -14,25 +14,25 @@ model Setting {
 }
 
 model User {
-  id            String   @id @default(cuid())
-  name          String
-  phone         String   @unique
-  password      String
-  balance       Float    @default(0)
-  active        Boolean  @default(true)
-  referralCode  String   @unique @default("")
-  referredBy    String   @default("")
-  referralCount Int      @default(0)
-  referralReward Float   @default(0)
-  whatsappShareCount Int @default(0)
+  id               String   @id @default(cuid())
+  name             String
+  phone            String   @unique
+  password         String
+  balance          Float    @default(0)
+  active           Boolean  @default(true)
+  referralCode     String   @unique @default("")
+  referredBy       String   @default("")
+  referralCount    Int      @default(0)
+  referralReward   Float    @default(0)
+  whatsappShareCount Int    @default(0)
   referralCompleted Boolean @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  orders        Order[]
-  deposits      Deposit[]
-  notifications Notification[]
-  referrals     Referral[]
-  referred      Referral[] @relation("ReferredUser")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  orders           Order[]
+  deposits         Deposit[]
+  notifications    Notification[]
+  referrals        Referral[]
+  referred         Referral[] @relation("ReferredUser")
 }
 
 model Network {
@@ -92,14 +92,14 @@ model Deposit {
 }
 
 model Referral {
-  id             String   @id @default(cuid())
-  referrerId     String
-  referredId     String   @unique
+  id              String   @id @default(cuid())
+  referrerId      String
+  referredId      String   @unique
   rewardGranted   Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  referrer       User     @relation(fields: [referrerId], references: [id])
-  referred       User     @relation("ReferredUser", fields: [referredId], references: [id])
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  referrer        User     @relation(fields: [referrerId], references: [id])
+  referred        User     @relation("ReferredUser", fields: [referredId], references: [id])
 }
 
 model Notification {

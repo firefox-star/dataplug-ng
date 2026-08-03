@@ -6,65 +6,28 @@ import { z } from 'zod';
 export async function GET(req: NextRequest) {
   const { error } = await adminAuth(req);
   if (error) return error;
-
-  const plans = await db.dataPlan.findMany({
-    include: { network: true },
-    orderBy: [{ networkId: 'asc' }, { sortOrder: 'asc' }],
-  });
-
+  const plans = await db.dataPlan.findMany({ include: { network: true }, orderBy: [{ networkId: 'asc' }, { sortOrder: 'asc' }] });
   return NextResponse.json({ plans });
 }
 
 const createSchema = z.object({
-  networkId: z.string().min(1),
-  name: z.string().min(1),
-  size: z.number().positive(),
-  price: z.number().positive(),
-  validity: z.string().min(1),
-  active: z.boolean().optional(),
-  sortOrder: z.number().optional(),
+  networkId: z.string().min(1), name: z.string().min(1), size: z.number().positive(),
+  price: z.number().positive(), validity: z.string().min(1),
+  active: z.boolean().optional(), sortOrder: z.number().optional(),
 });
 
 export async function POST(req: NextRequest) {
   const { error } = await adminAuth(req);
   if (error) return error;
-
   try {
     const body = await req.json();
     const parsed = createSchema.safeParse(body);
-    if (!parsed.success) {
-      const errors = parsed.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ');
-      return NextResponse.json({ error: `Invalid plan data: ${errors}` }, { status: 400 });
-    }
-
-    // Verify network exists
+    if (!parsed.success) return NextResponse.json({ error: 'Invalid plan data' }, { status: 400 });
     const network = await db.network.findUnique({ where: { id: parsed.data.networkId } });
-    if (!network) {
-      return NextResponse.json({ error: 'Network not found' }, { status: 404 });
-    }
-
-    // Get next sort order for this network
-    const maxSort = await db.dataPlan.aggregate({
-      where: { networkId: parsed.data.networkId },
-      _max: { sortOrder: true },
-    });
+    if (!network) return NextResponse.json({ error: 'Network not found' }, { status: 404 });
+    const maxSort = await db.dataPlan.aggregate({ where: { networkId: parsed.data.networkId }, _max: { sortOrder: true } });
     const sortOrder = parsed.data.sortOrder ?? (maxSort._max.sortOrder ?? 0) + 1;
-
-    const plan = await db.dataPlan.create({
-      data: {
-        networkId: parsed.data.networkId,
-        name: parsed.data.name,
-        size: parsed.data.size,
-        price: parsed.data.price,
-        validity: parsed.data.validity,
-        active: parsed.data.active ?? true,
-        sortOrder,
-      },
-    });
-
+    const plan = await db.dataPlan.create({ data: { ...parsed.data, sortOrder } });
     return NextResponse.json({ plan, message: 'Plan created successfully' });
-  } catch (err) {
-    console.error('Create plan error:', err);
-    return NextResponse.json({ error: 'Failed to create plan' }, { status: 500 });
-  }
+  } catch (err) { return NextResponse.json({ error: 'Failed to create plan' }, { status: 500 }); }
 }
